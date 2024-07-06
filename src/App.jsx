@@ -1,16 +1,12 @@
 import { useState } from 'react';
 import './App.css';
 
-function User(username, balance, history, debts) {
+function User(username, balance, history, debts, loans) {
   this.username = username;
   this.balance = balance;
   this.history = history;
   this.debts = debts;
-}
-
-function Debt(username, amount){
-  this.username = username;
-  this.amount = amount;
+  this.loans = loans
 }
 
 function App() {
@@ -40,127 +36,30 @@ function App() {
 
     switch (commands[0]) {
       case 'help': //Handle help command
-        newEntry = commandsList.help; // List of available commands
+        newEntry = commandsList.help; 
         break;
       case 'clear': //Handle clear console command
-        setCliHistory([]);
+        setCliHistory([])
         return; // forcing to return to stop from the clear command from being registered by the setCliHistory function down below
       case 'login': //Handle login command
-        //assuming that the system doesn't allow a user to login more than once
-        if(currentUser==null) { //checks if a user is logged in
-          if (commands[1]) { //checks for the username argument in the CLI input 
-            if (userDoesNotExist(users, commands[1])) { //check if a user with said username exists. if not, create a new user
-              const newUser = new User(commands[1], 0, [], []); //create a new user object
-              const newUsersMap = users 
-              newUsersMap.set(commands[1], newUser); //add the new user to the temporary users map
-              setUsers(newUsersMap); //update the state of users map with the updated temporary users Map
-            }
-            setCurrentUser(users.get(commands[1]) || { username: commands[1], balance: 0, history: [], debts: [] }); //set the current user to the user with the specified username
-            newEntry = `Welcome, ${commands[1]}`; //User Greeting to send to setCliHistory
-          } else { //if no username is specified
-            newEntry = 'Please specify your username'; //notify the user to specify their username.
-          }
-        }
-        else{
-          newEntry = `You're now logged in as ${currentUser.username} and thus this command is not available` //notify the user that they are already logged in
-        }
+        newEntry = handleLogin(commands)
         break;
       case 'logout': //Handle logout command
-        if (currentUser) { //checks if a user is logged in
-          newEntry = `Goodbye, ${currentUser.username}`; //new Entry variable to send to setCliHistory
-          setCurrentUser(null); //sets current user to null after logging out
-        } else { //if no user is currently logged in, tell the user and do nothing but add to the CLI history.
-          newEntry = 'No user is currently logged in'; //new Entry variable to send to setCliHistory
-        }
+        newEntry = handleLogout()
         break;
       case 'deposit': // Handle deposit command
-        if(currentUser) { //checks if a user is logged in
-          if (commands[1]) { //checks for the amount argument in the CLI input
-            const amount = parseInt(commands[1]); //convert the amount into an integer. 
-            if (!isNaN(amount)) { //check if the amount is a number
-              if(amount>0) { //check if the amount is positive
-                while(currentUser.debts.length>0 && amount>0) { //check if the user has any debts and if the amount is greater than 0
-                  const debt = currentUser.debts[0] //get the oldest debt
-                  if(amount>=debt.amount) { //check if the amount is greater than or equal to the debt
-                    debt.amount -= amount;
-                  }
-                  if(debt.amount==0) { //if the debt is paid off, if the debt is paid off then shifts the oldest debt that was paid
-                    currentUser.debts.shift();
-                  }
-                }
-              }
-              else{
-                newEntry = `Please specify an amount greater than 0`;
-              }
-            }
-            else{
-              newEntry = `Please specify a valid amount to deposit (positive round numbers only)`;
-            }
-          }
-          else{
-            newEntry = `Please specify an amount to deposit`;
-          }
-        }
-        else{
-          newEntry = `No user is currently logged in. Please login first before doing any transactions`;
-        }
+        newEntry = handleDeposit(commands);
         break;
-      case 'withdraw': // Handle withdraw command
-        if(currentUser) { //checks if a user is logged in
-          if (commands[1]) { //checks for the amount argument in the CLI input
-            const amount = parseInt(commands[1]); //convert the amount into an integer. 
-            if (!isNaN(amount)) { //check if the amount is a number
-              if(amount>0) { //check if the amount is positive
-                currentUser.balance -= amount; //subtract the amount from the balance
-                currentUser.history.push(`${currentUser.username} withdrew ${amount}`); //add the transaction to the history
-                newEntry = `You withdrew ${amount} from your account`; //new Entry variable to send to setCliHistory
-              }
-              else{
-                newEntry = `Please specify an amount greater than 0`;
-              }
-            }
-            else{
-              newEntry = `Please specify a valid amount to withdraw (positive round numbers only)`;
-            }
-          }
-          else{
-            newEntry = `Please specify an amount to withdraw`;
-          }
-        }
+      case 'withdraw': 
+        newEntry = handleWithdraw(commands);
         break;
       case 'transfer': // Handle transfer command
-        if(currentUser) { //checks if a user is logged in
-          if (commands[1] && commands[2]) { //checks for the username and amount arguments in the CLI input
-            const amount = parseInt(commands[2]); //convert the amount into an integer. 
-            if (!isNaN(amount)) { //check if the amount is a number
-              if(amount>0) { //check if the amount is positive
-                if(currentUser.balance<amount) { //check if the amount is less than or equal to the balance
-                  const newDebt = new Debt(commands[1], (amount-currentUser.balance)); //create a new debt object
-                }
-                else{
-                  currentUser.balance -= amount; //subtract the amount from the balance
-                  currentUser.history.push(`${currentUser.username} transferred ${amount} to ${commands[1]}`); //add the transaction to the history
-                  newEntry = `You transferred ${amount} to ${commands[1]}`; //new Entry variable to send to setCliHistory
-                }
-              }
-              else{
-                newEntry = `Please specify an amount greater than 0`;
-              }
-            }
-            else{
-              newEntry = `Please specify a valid amount to transfer (positive round numbers only)`;
-            }
-          }
-        }
-        else{
-          newEntry = `No user is currently logged in. Please login first before doing any transactions`;
-        }
+        newEntry = handleTransfer(commands);
         break;
       default:
         newEntry = `Unknown command: ${command}`;
     }
 
-    // Update while using filter to differentiate between history of commands  and history of outputs from a command.
     setCliHistory(prevHistory => [...prevHistory, `> ${command}`, newEntry].filter(Boolean));
   };
 
@@ -171,6 +70,172 @@ function App() {
       handleCommand(input.trim());
     }
   };
+
+  const handleLogin = (commands) => {
+    //assuming that the system doesn't allow a user to login more than once
+    if(currentUser){
+      return `You're now logged in as ${currentUser.username} and thus this command is not available`
+    }
+   
+    if(!commands[1]){
+      return 'Please specify your username';
+    }
+
+    if (userDoesNotExist(users, commands[1])) { //check if a user with said username exists. if not, create a new user
+      const newUser = new User(commands[1], 0, [], new Map(), new Map()); //create a new user object
+      const newUsersMap = users 
+      newUsersMap.set(commands[1], newUser); //add the new user to the temporary users map
+      setUsers(newUsersMap); //update the state of users map with the updated temporary users Map
+    }
+
+    setCurrentUser(users.get(commands[1])); //set the current user to the user with the specified username
+    return `Welcome, ${commands[1]}`; //User Greeting to send to setCliHistory
+  }
+
+  const handleLogout = () => {
+    if (currentUser) { 
+      setCurrentUser(null); 
+      return `Goodbye, ${currentUser.username}`
+     
+    } 
+    return 'No user is currently logged in'
+  }
+
+  const handleDeposit = (commands) => {
+    if (!currentUser) {
+      return 'No user is currently logged in. Please log in first.';
+    }
+    if (!commands[1]) {
+      return 'Please specify an amount to deposit';
+    }
+    const amount = parseInt(commands[1], 10);
+    if (isNaN(amount) || amount <= 0) {
+      return 'Please specify a valid amount to deposit (positive round numbers only)';
+    }
+    let remainingAmount = amount;
+  
+    currentUser.debts.forEach(d => {
+      console.log(d.lender, d.amount);
+    })
+
+    currentUser.debts.forEach((amount, lender) => {
+      if (remainingAmount > 0) {
+        if (remainingAmount >= amount) {
+          remainingAmount -= amount;
+          currentUser.history.push(`Paid off debt of $${amount} to ${lender}`);
+          currentUser.debts.delete(lender); // Remove the debt from the Map
+  
+          // Update the lender's balance
+          const targetUser = users.get(lender);
+          targetUser.balance += amount;
+          targetUser.loans.delete(currentUser.username);
+          targetUser.history.push(`Received $${amount} from ${currentUser.username} as debt payment`);
+        } 
+        else {
+          amount -= remainingAmount;
+          currentUser.history.push(`Paid $${remainingAmount} to ${lender} as Partial payment. Remaining debt: $${amount}`);
+          remainingAmount = 0;
+  
+          // Update the lender's balance
+          const targetUser = users.get(lender);
+          targetUser.balance += remainingAmount;
+          targetUser.loans.set(currentUser.username, amount);
+          targetUser.history.push(`Received $${remainingAmount} from ${currentUser.username} as partial debt payment`);
+  
+          currentUser.debts.set(lender, amount);
+        }
+      }
+    });
+  
+    // Add remaining amount to the user's balance
+    currentUser.balance += remainingAmount;
+    currentUser.history.push(`Deposited $${remainingAmount}. New balance: $${currentUser.balance}`);
+    return `Your balance is : $${currentUser.balance}`;
+  };  
+
+  const handleTransfer = (commands) => {
+    if (!currentUser) {
+      return 'No user is currently logged in. Please log in first.';
+    }
+  
+    const targetUsername = commands[1];
+    const amount = parseInt(commands[2]);
+  
+    if (!targetUsername || isNaN(amount)) {
+      return 'Please specify a valid username and amount to transfer.';
+    }
+  
+    if (amount <= 0) {
+      return 'Please specify a positive amount to transfer.';
+    }
+  
+    if (!users.has(targetUsername)) {
+      return `User ${targetUsername} does not exist.`;
+    }
+  
+    if (currentUser.username === targetUsername) {
+      return 'You cannot transfer money to yourself.';
+    }
+  
+    const targetUser = users.get(targetUsername);
+  
+    if (currentUser.balance < amount) {
+      var deficit = amount - currentUser.balance;
+      const transferAmount = currentUser.balance;
+  
+      if(currentUser.debts.get(targetUsername)) { 
+        currentUser.debts.get(targetUsername).amount += deficit; 
+        targetUser.loans.get(currentUser.username).amount += deficit;
+        deficit = currentUser.debts.get(targetUsername).amount; 
+      }
+      else { 
+        currentUser.debts.set(targetUsername,  deficit);
+        targetUser.loans.set(currentUser.username, deficit);
+      }
+  
+      currentUser.balance = 0;
+      targetUser.balance += transferAmount;
+  
+      currentUser.history.push(`Transferred $${transferAmount} to ${targetUsername}.\nYour balance is $${currentUser.balance}.\n  ${deficit}`);
+      targetUser.history.push(`Received ${transferAmount} from ${currentUser.username}. Owed ${deficit} more`);
+      
+      return `Transferred $${transferAmount} to ${targetUsername}. \nYour balance is $${currentUser.balance}. \nOwed $${deficit} to ${targetUsername}`;
+    } 
+    else {
+      currentUser.balance -= amount;
+      targetUser.balance += amount;
+  
+      currentUser.history.push(`Transferred $${amount} to ${targetUsername}`);
+      targetUser.history.push(`Received $${amount} from ${currentUser.username}`);
+  
+      return `You transferred $${amount} to ${targetUsername}. Your new balance is $${currentUser.balance}`;
+    }
+  };
+
+  const handleWithdraw = (commands) => {
+    if(!currentUser) { 
+      return 'No user is currently logged in. Please log in first.';
+    }
+
+    if(!commands[1]){
+      return 'Please specify an amount to withdraw';
+    }
+
+    const amount = parseInt(commands[1]); 
+
+    if(isNaN(amount) || amount <= 0) {
+      return 'Please specify a valid amount to withdraw (positive round numbers only)';
+    }
+    
+    if(currentUser.balance < amount) {
+      return `Insufficient funds. Your current balance is $${currentUser.balance}`;
+    }
+
+    currentUser.balance -= amount;
+    currentUser.history.push(`Withdrew $${amount}. New balance: $${currentUser.balance}`);
+    return `Withdrew $${amount}\n. New balance: $${currentUser.balance}`;
+
+  }
 
   return (
     <div className="cli-container">
