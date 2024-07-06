@@ -1,13 +1,6 @@
 import { useState } from 'react';
 import './App.css';
-
-function User(username, balance, history, debts, loans) {
-  this.username = username;
-  this.balance = balance;
-  this.history = history;
-  this.debts = debts;
-  this.loans = loans
-}
+import User from './entities/user';
 
 function App() {
   const [input, setInput] = useState('');
