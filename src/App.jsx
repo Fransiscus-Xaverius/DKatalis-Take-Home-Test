@@ -83,7 +83,7 @@ function App() {
 
     if (userDoesNotExist(users, commands[1])) { //check if a user with said username exists. if not, create a new user
       const newUser = new User(commands[1], 0, [], new Map(), new Map()); //create a new user object
-      const newUsersMap = users 
+      const newUsersMap = users; 
       newUsersMap.set(commands[1], newUser); //add the new user to the temporary users map
       setUsers(newUsersMap); //update the state of users map with the updated temporary users Map
     }
@@ -95,10 +95,10 @@ function App() {
   const handleLogout = () => {
     if (currentUser) { 
       setCurrentUser(null); 
-      return `Goodbye, ${currentUser.username}`
+      return `Goodbye, ${currentUser.username}`;
      
     } 
-    return 'No user is currently logged in'
+    return 'No user is currently logged in';
   }
 
   const handleDeposit = (commands) => {
@@ -113,16 +113,14 @@ function App() {
       return 'Please specify a valid amount to deposit (positive round numbers only)';
     }
     let remainingAmount = amount;
-  
-    currentUser.debts.forEach(d => {
-      console.log(d.lender, d.amount);
-    })
+    let newEntry = "";
 
     currentUser.debts.forEach((amount, lender) => {
       if (remainingAmount > 0) {
         if (remainingAmount >= amount) {
           remainingAmount -= amount;
           currentUser.history.push(`Paid off debt of $${amount} to ${lender}`);
+          newEntry += `Transferred $${amount} to ${lender}.\n`
           currentUser.debts.delete(lender); // Remove the debt from the Map
   
           // Update the lender's balance
@@ -134,6 +132,7 @@ function App() {
         else {
           amount -= remainingAmount;
           currentUser.history.push(`Paid $${remainingAmount} to ${lender} as Partial payment. Remaining debt: $${amount}`);
+          newEntry += `Transferred $${remainingAmount} to ${lender}.\n`
           remainingAmount = 0;
   
           // Update the lender's balance
@@ -146,11 +145,16 @@ function App() {
         }
       }
     });
-  
     // Add remaining amount to the user's balance
     currentUser.balance += remainingAmount;
+    newEntry += `Your balance is : $${currentUser.balance}`;
+
+    currentUser.debts.forEach((amount, lender) =>{
+      newEntry += `\nOwed $${amount} to ${lender}`;
+    });
+    
     currentUser.history.push(`Deposited $${remainingAmount}. New balance: $${currentUser.balance}`);
-    return `Your balance is : $${currentUser.balance}`;
+    return newEntry;
   };  
 
   const handleTransfer = (commands) => {
