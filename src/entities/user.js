@@ -1,6 +1,6 @@
 class User {
     /**
-     * Create a user.
+     * Creates a user object.
      * @param {string} username - The username of the user.
      * @param {number} [balance=0] - The balance of the user.
      * @param {Array} [history=[]] - The transaction history of the user.
