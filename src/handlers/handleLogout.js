@@ -9,12 +9,12 @@
 import User from "../entities/user";
 
 const handleLogout = (currentUser, setCurrentUser) => {
-    if (currentUser) {
-      const username = currentUser.username;
-      setCurrentUser(null);
-      return `Goodbye, ${username}`;
-    }
-    return 'No user is currently logged in';
+  if (currentUser) {
+    const username = currentUser.username;
+    setCurrentUser(null);
+    return `Goodbye, ${username}`;
+  }
+  return 'No user is currently logged in';
 };
   
 export default handleLogout;

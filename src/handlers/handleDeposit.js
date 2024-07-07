@@ -1,4 +1,5 @@
 import User from "../entities/user";
+import { userDetails } from "../utils/helperFunctions";
 
 /**
  * Handles the deposit command. This function can also pay off debts if the user has any. The debts are paid off in a FIFO basis.
@@ -25,10 +26,15 @@ const handleDeposit = (commands, currentUser, users, setUsers, setCurrentUser) =
   }
 
   let remainingAmount = amount;
-  let newEntry = ``;
+  let transactionEntries = [];
 
   // Create a copy of the current user
-  const updatedCurrentUser = { ...currentUser, balance: currentUser.balance, history: [...currentUser.history], debts: new Map(currentUser.debts) };
+  const updatedCurrentUser = { 
+    ...currentUser, 
+    balance: currentUser.balance, 
+    history: [...currentUser.history], 
+    debts: new Map(currentUser.debts) 
+  };
 
   // Create a new map for users to reflect changes
   const updatedUsers = new Map(users);
@@ -36,43 +42,45 @@ const handleDeposit = (commands, currentUser, users, setUsers, setCurrentUser) =
   for (const [lender, debtAmount] of updatedCurrentUser.debts.entries()) {
     if (remainingAmount > 0) {
       const targetUser = updatedUsers.get(lender);
-      const updatedTargetUser = { ...targetUser, balance: targetUser.balance, history: [...targetUser.history], loans: new Map(targetUser.loans) };
-
+      const updatedTargetUser = { 
+        ...targetUser, 
+        balance: targetUser.balance, 
+        history: [...targetUser.history], 
+        loans: new Map(targetUser.loans) 
+      };
       if (remainingAmount >= debtAmount) {
         remainingAmount -= debtAmount;
         updatedCurrentUser.history.push(`Paid off debt of $${debtAmount} to ${lender}`);
-        newEntry += `Transferred $${debtAmount} to ${lender}.\n`;
+        transactionEntries.push(`Transferred $${debtAmount} to ${lender}.`);
         updatedCurrentUser.debts.delete(lender);
-
         updatedTargetUser.balance += debtAmount;
         updatedTargetUser.loans.delete(currentUser.username);
         updatedTargetUser.history.push(`Received $${debtAmount} from ${currentUser.username} as debt payment`);
-      } 
-      else {
+      } else {
         updatedCurrentUser.debts.set(lender, debtAmount - remainingAmount);
         updatedCurrentUser.history.push(`Paid $${remainingAmount} to ${lender} as partial payment. Remaining debt: $${debtAmount - remainingAmount}`);
-        newEntry += `Transferred $${remainingAmount} to ${lender}.\n`;
-
+        transactionEntries.push(`Transferred $${remainingAmount} to ${lender}.`);
         updatedTargetUser.balance += remainingAmount;
         updatedTargetUser.loans.set(currentUser.username, debtAmount - remainingAmount);
         updatedTargetUser.history.push(`Received $${remainingAmount} from ${currentUser.username} as partial debt payment`);
 
         remainingAmount = 0;
       }
-
       updatedUsers.set(lender, updatedTargetUser);
     }
   }
 
   updatedCurrentUser.balance += remainingAmount;
-
   updatedCurrentUser.history.push(`Deposited $${remainingAmount}. New balance: $${updatedCurrentUser.balance}`);
 
   // Update state
   setUsers(new Map(updatedUsers.set(currentUser.username, updatedCurrentUser)));
   setCurrentUser(updatedCurrentUser);
-  newEntry += `Your balance is $${updatedCurrentUser.balance}.\n`;
-  return newEntry;
+
+  // Create the final message
+  const finalMessage = transactionEntries.join('\n') + userDetails(updatedCurrentUser, '');
+
+  return finalMessage;
 };
 
 export default handleDeposit;

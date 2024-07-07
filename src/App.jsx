@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import handleLogin from './handlers/handleLogin';
 import handleLogout from './handlers/handleLogout';
 import handleDeposit from './handlers/handleDeposit';
@@ -35,7 +35,7 @@ function App() {
         newEntry = handleDeposit(commands, currentUser, users, setUsers, setCurrentUser);
         break;
       case 'withdraw':
-        newEntry = handleWithdraw(commands, currentUser, setCurrentUser);
+        newEntry = handleWithdraw(commands, currentUser, users, setUsers, setCurrentUser);
         break;
       case 'transfer':
         newEntry = handleTransfer(commands, currentUser, users, setUsers, setCurrentUser);

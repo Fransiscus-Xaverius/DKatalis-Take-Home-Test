@@ -1,6 +1,5 @@
-import User from '../entities/user';
-import { userDoesNotExist } from '../utils/helperFunctions';
-import { userDetails } from '../utils/helperFunctions';  
+import User from "../entities/user";
+import { userDetails } from "../utils/helperFunctions";
 
 /**
  * Handles the user login command.
@@ -21,19 +20,20 @@ const handleLogin = (commands, users, setUsers, setCurrentUser, currentUser) => 
     return 'Please specify your username';
   }
 
-  if (userDoesNotExist(users, commands[1])) {
-    const newUser = new User(commands[1], 0, [], new Map(), new Map());
-    const newUsersMap = new Map(users); // Create a new Map
-    newUsersMap.set(commands[1], newUser);
-    setUsers(newUsersMap); // Update the state with the new Map
-    setCurrentUser(newUser); // Set the newly created user as the current user
-    return `Welcome, ${commands[1]}\nYour balance is $0`;
+  if (users.has(commands[1])) {
+    const loggedInUser = users.get(commands[1]);
+    setCurrentUser(loggedInUser);
+    const messageEntry = `Welcome back, ${commands[1]}`;
+    return userDetails(loggedInUser, messageEntry);
   }
 
-  const loggedInUser = users.get(commands[1]);
-  setCurrentUser(loggedInUser);
-  const messageEntry = `Welcome, ${commands[1]}`;
-  return userDetails(loggedInUser, messageEntry);
+  // User does not exist, create a new user
+  const newUser = new User(commands[1], 0, [], new Map(), new Map());
+  const newUsersMap = new Map(users); // Create a new Map
+  newUsersMap.set(commands[1], newUser);
+  setUsers(newUsersMap); // Update the state with the new Map
+  setCurrentUser(newUser); // Set the newly created user as the current user
+  return `Welcome, ${commands[1]}\nYour balance is $0`;
 };
 
 export default handleLogin;
